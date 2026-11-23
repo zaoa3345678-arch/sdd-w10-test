@@ -43,3 +43,32 @@ def test_search_by_category(sample_db):
 
 
 # ---------------- 第二輪：邊界與錯誤情況 ----------------
+@pytest.mark.parametrize("length, expected_ok", [
+    (50, True),     # 邊界：剛好 50 字
+    (51, False),    # 邊界：多 1 字
+    (55, False),
+])
+def test_description_length(db, length, expected_ok):
+    assert service.report_found(db, "水壺", "教室", "藍" * length)["ok"] is expected_ok
+
+
+def test_claim_limit_per_person(sample_db):
+    assert service.claim(sample_db, 1, "王小明")["ok"] is True
+    assert service.claim(sample_db, 2, "王小明")["ok"] is True
+    assert service.claim(sample_db, 3, "王小明")["ok"] is False
+
+
+@pytest.mark.parametrize("claimer", ["", "   ", None])
+def test_claim_requires_name(sample_db, claimer):
+    assert service.claim(sample_db, 1, claimer)["ok"] is False
+
+
+def test_search_requires_condition(sample_db):
+    assert service.search(sample_db)["ok"] is False
+
+
+def test_handle_message_search_by_location_only(sample_db, fake_ai):
+    ask = fake_ai({"有人在餐廳撿到東西嗎": "查詢|未知|餐廳"})
+    result = service.handle_message(sample_db, "有人在餐廳撿到東西嗎", "", ask)
+    assert result["ok"] is True
+    assert [it["id"] for it in result["data"]["items"]] == [2]
