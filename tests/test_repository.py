@@ -38,3 +38,39 @@ def test_mark_claimed_once(sample_db):
 
 
 # ---------------- 第二輪：邊界與錯誤情況 ----------------
+def test_mark_claimed_twice_fails(sample_db):
+    repository.mark_claimed(sample_db, 1, "王小明")
+    assert repository.mark_claimed(sample_db, 1, "李小華") is False
+
+
+def test_find_items_excludes_claimed(sample_db):
+    repository.mark_claimed(sample_db, 1, "王小明")
+    ids = [it["id"] for it in repository.find_items(sample_db, category="雨傘")]
+    assert ids == [3]
+
+
+def test_find_items_by_category_and_location(sample_db):
+    ids = [it["id"] for it in repository.find_items(sample_db, "雨傘", "教室")]
+    assert ids == [3]
+
+
+def test_count_claimed_by(sample_db):
+    repository.mark_claimed(sample_db, 1, "王小明")
+    repository.mark_claimed(sample_db, 2, "李小華")
+    assert repository.count_claimed_by(sample_db, "王小明") == 1
+    assert repository.count_claimed_by(sample_db, "陳大文") == 0
+
+
+def test_stats_lists_category_without_items(sample_db):
+    rows = {r["類別"]: r for r in repository.category_stats(sample_db)}
+    assert rows["鑰匙"]["總件數"] == 0
+
+
+@pytest.mark.parametrize("column, expected", [
+    ("總件數", 2),
+    ("待認領", 2),
+    ("已認領", 0),
+])
+def test_stats_umbrella(sample_db, column, expected):
+    rows = {r["類別"]: r for r in repository.category_stats(sample_db)}
+    assert rows["雨傘"][column] == expected
