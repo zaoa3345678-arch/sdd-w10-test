@@ -22,6 +22,24 @@ def test_claim(sample_db, item_id, claimer, expected_ok):
 
 
 # ---------------- 第一輪：請從這裡開始加 ----------------
+@pytest.mark.parametrize("category, location, description, expected_ok", [
+    ("雨傘", "圖書館", "", True),      # 正常
+    ("飛機", "圖書館", "", False),     # 錯誤：類別不在清單
+    ("水壺", None, "", False),         # 錯誤：沒說地點
+    ("水壺", "月球", "", False),       # 錯誤：地點不在清單
+])
+def test_report_found(db, category, location, description, expected_ok):
+    assert service.report_found(db, category, location, description)["ok"] is expected_ok
+
+
+def test_claim_without_id(sample_db):
+    assert service.claim(sample_db, None, "王小明")["ok"] is False
+
+
+def test_search_by_category(sample_db):
+    result = service.search(sample_db, "雨傘", None)
+    assert len(result["data"]["items"]) == 2
+
 
 
 # ---------------- 第二輪：邊界與錯誤情況 ----------------
