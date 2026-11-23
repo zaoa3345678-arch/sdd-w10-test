@@ -35,3 +35,22 @@ def test_parse_reply_round1(reply, user_text, field, expected):
 
 
 # ---------------- 第二輪：邊界與錯誤情況 ----------------
+@pytest.mark.parametrize("reply, user_text, field, expected", [
+    ("認領|未知|未知", "我要認領 12 號", "item_id", 12),        # 兩位數編號
+    ("認領|未知|未知", "我要認領三號", "item_id", None),        # 國字編號抓不到
+    ("查詢|耳機", "有人撿到耳機嗎", "category", "耳機"),        # AI 少回一欄
+    ("查詢|雨傘水壺|教室", "我在教室掉了東西", "category", "雨傘"),  # 出現兩個類別取最早的
+    ("", "隨便說說", "location", "未知"),                      # AI 沒回覆
+])
+def test_parse_reply_round2(reply, user_text, field, expected):
+    assert ai_parser.parse_reply(reply, user_text)[field] == expected
+
+
+@pytest.mark.parametrize("sentence, action", [
+    ("有人撿到學生證嗎", "查詢"),
+    ("我在操場撿到一個水壺", "登記"),
+    ("我要認領 2 號", "認領"),
+])
+def test_keyword_ai_action(sentence, action):
+    ask = ai_parser.make_keyword_ask()
+    assert ask(sentence).split("|")[0] == action
